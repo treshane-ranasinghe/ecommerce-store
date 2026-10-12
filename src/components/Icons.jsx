@@ -1,0 +1,23 @@
+const base = { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.7, strokeLinecap: 'round', strokeLinejoin: 'round' };
+const I = (paths) => (props) => <svg {...base} {...props} aria-hidden="true">{paths}</svg>;
+
+export const BagIcon = I(<><path d="M5 8h14l-1 12H6L5 8z" /><path d="M9 8V6a3 3 0 0 1 6 0v2" /></>);
+export const SearchIcon = I(<><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></>);
+export const HeartIcon = I(<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" />);
+export const CloseIcon = I(<path d="M6 6l12 12M18 6 6 18" />);
+export const PlusIcon = I(<path d="M12 5v14M5 12h14" />);
+export const MinusIcon = I(<path d="M5 12h14" />);
+export const ChevronRight = I(<path d="m9 6 6 6-6 6" />);
+export const ChevronDown = I(<path d="m6 9 6 6 6-6" />);
+export const TruckIcon = I(<><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7" /><circle cx="7" cy="17.5" r="1.5" /><circle cx="17" cy="17.5" r="1.5" /></>);
+export const ShieldIcon = I(<><path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6l-7-3z" /><path d="m9 12 2 2 4-4" /></>);
+export const ReturnIcon = I(<><path d="M4 9h11a5 5 0 0 1 0 10H8" /><path d="m8 5-4 4 4 4" /></>);
+export const StoreIcon = I(<><path d="M4 9h16l-1-4H5L4 9z" /><path d="M5 9v10h14V9M10 19v-5h4v5" /></>);
+export const TradeIcon = I(<><path d="M7 4 4 7l3 3" /><path d="M4 7h12a4 4 0 0 1 4 4" /><path d="m17 20 3-3-3-3" /><path d="M20 17H8a4 4 0 0 1-4-4" /></>);
+export const CardIcon = I(<><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="M3 10h18M7 15h3" /></>);
+export const CashIcon = I(<><rect x="3" y="6" width="18" height="12" rx="2" /><circle cx="12" cy="12" r="2.5" /></>);
+export const PhoneIcon = I(<><rect x="7" y="3" width="10" height="18" rx="2.5" /><path d="M11 18h2" /></>);
+export const LockIcon = I(<><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></>);
+export const StarIcon = (props) => <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" {...props}><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" /></svg>;
+export const MenuIcon = I(<path d="M4 9h16M4 15h16" />);
+export const TagIcon = I(<><path d="M3 12V4h8l9 9-8 8-9-9z" /><circle cx="7.5" cy="7.5" r="1.5" /></>);
