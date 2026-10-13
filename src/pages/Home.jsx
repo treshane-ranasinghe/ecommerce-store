@@ -1,15 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import useScrollProgress, { useIsMobile } from '../hooks/useScrollProgress';
+import useScrollProgress from '../hooks/useScrollProgress';
 import Reveal from '../components/Reveal';
 import SplitText from '../components/SplitText';
-import Marquee from '../components/Marquee';
-import Counter from '../components/Counter';
+import ProductCard from '../components/ProductCard';
 import { ProductImage, PhotoOrArt } from '../components/ProductArt';
-import { products, getProduct } from '../data/products';
+import { products, categories, getProduct } from '../data/products';
 import { formatPrice, STORE, HERO } from '../config';
 import { useStore } from '../context/StoreContext';
-import { PlusIcon, ChevronRight, TruckIcon, ShieldIcon, ReturnIcon, TradeIcon, BagIcon } from '../components/Icons';
+import { PlusIcon, ChevronLeft, ChevronRight, TruckIcon, ShieldIcon, ReturnIcon, StoreIcon, BagIcon } from '../components/Icons';
 
 /* ------------------------------------------------------------------ HERO */
 const chips = [
@@ -96,239 +95,337 @@ function Hero() {
   );
 }
 
-/* ------------------------------------------------------- WORD REVEAL */
-function Statement() {
-  const ref = useRef(null);
-  useScrollProgress(ref, { mobile: 1 });
-  const parts = [
-    ['The most powerful', 0], ['iPhones.', 1], ['The most immersive', 0], ['AirPods.', 1],
-    ['And every accessory that keeps you', 0], ['charged,', 1], ['protected and connected —', 0], ['delivered to your door.', 0],
-  ];
-  const words = parts.flatMap(([t, hl]) => t.split(' ').map((w) => [w, hl]));
+/* ------------------------------------------------------------ SHARED */
+function SectionHead({ title, sub, to, cta }) {
   return (
-    <section ref={ref} className="statement">
-      <div className="statement__sticky container">
-        <p className="eyebrow">Why {STORE.name}</p>
-        <p className="statement__text">
-          {words.map(([w, hl], i) => (
-            <span key={i} className={hl ? 'hl' : ''} style={{ '--i': i / words.length }}>{w} </span>
-          ))}
-        </p>
+    <Reveal className="shead">
+      <h2 className="shead__title">{title} <span>{sub}</span></h2>
+      {to && <Link to={to} className="shead__link">{cta}<ChevronRight width={16} height={16} /></Link>}
+    </Reveal>
+  );
+}
+
+function ColorDots({ product, color, onChange }) {
+  if (product.colors.length < 2) return null;
+  return (
+    <div className="dots" role="radiogroup" aria-label={`${product.name} color`}>
+      {product.colors.map((c) => (
+        <button key={c.name} type="button" role="radio" aria-checked={c.name === color.name} aria-label={c.name} title={c.name}
+          className={`swatch ${c.name === color.name ? 'is-on' : ''}`} style={{ '--c': c.hex }} onClick={() => onChange(c)} />
+      ))}
+    </div>
+  );
+}
+
+// Native horizontal scroller with prev/next buttons for pointer users.
+function Rail({ label, children }) {
+  const ref = useRef(null);
+  const raf = useRef(0);
+  const [edge, setEdge] = useState({ start: true, end: false });
+  const measure = () => {
+    raf.current = 0;
+    const el = ref.current;
+    if (!el) return;
+    setEdge({ start: el.scrollLeft < 8, end: el.scrollLeft + el.clientWidth > el.scrollWidth - 8 });
+  };
+  const onScroll = () => { if (!raf.current) raf.current = requestAnimationFrame(measure); };
+  useEffect(() => {
+    measure();
+    window.addEventListener('resize', onScroll);
+    return () => { window.removeEventListener('resize', onScroll); cancelAnimationFrame(raf.current); };
+  }, []);
+  const go = (dir) => {
+    const el = ref.current;
+    const card = el.firstElementChild?.getBoundingClientRect().width || el.clientWidth;
+    el.scrollBy({ left: dir * Math.max(card + 20, el.clientWidth - card), behavior: 'smooth' });
+  };
+  return (
+    <div className="rail">
+      <div ref={ref} className="rail__track" role="list" aria-label={label} onScroll={onScroll}>{children}</div>
+      <div className="rail__nav container">
+        <button type="button" className="rail__btn" onClick={() => go(-1)} disabled={edge.start} aria-label="Scroll back"><ChevronLeft /></button>
+        <button type="button" className="rail__btn" onClick={() => go(1)} disabled={edge.end} aria-label="Scroll forward"><ChevronRight /></button>
+      </div>
+    </div>
+  );
+}
+
+/* --------------------------------------------------------- CATEGORIES */
+const categoryArt = {
+  iphone: ['iphone-17-pro-max', 'Cosmic Orange'],
+  airpods: ['airpods-pro-3'],
+  powerbanks: ['powercore-10k'],
+  accessories: ['silicone-case-17-pro', 'Orange'],
+};
+
+function Categories() {
+  return (
+    <section className="hsec hsec--first">
+      <div className="container">
+        <SectionHead title="Shop by category." sub="Find exactly what you need." to="/shop" cta="Browse all" />
+        <div className="cats">
+          {categories.map((c, i) => {
+            const [id, colorName] = categoryArt[c.id];
+            const p = getProduct(id);
+            const color = p.colors.find((x) => x.name === colorName) || p.colors[0];
+            const count = products.filter((x) => x.category === c.id).length;
+            return (
+              <Reveal key={c.id} delay={i * 70} className="cats__cell">
+                <Link to={`/shop/${c.id}`} className="cat">
+                  <span className="cat__txt"><strong>{c.name}</strong><small>{count} products</small></span>
+                  <span className="cat__img"><ProductImage product={p} color={color} shadow={false} /></span>
+                  <span className="cat__go" aria-hidden="true"><ChevronRight width={16} height={16} /></span>
+                </Link>
+              </Reveal>
+            );
+          })}
+        </div>
       </div>
     </section>
   );
 }
 
-/* ------------------------------------------------- PINNED LINEUP */
-function LineupCard({ product, index }) {
+/* ------------------------------------------------------------ LATEST */
+const latestIds = ['iphone-17-pro-max', 'iphone-air', 'airpods-pro-3', 'airpods-max', 'iphone-17', 'powercore-20k', 'magsafe-battery', 'silicone-case-17-pro', 'airtag-4-pack'];
+
+function LatestCard({ product }) {
   const [color, setColor] = useState(product.colors[0]);
   const imgRef = useRef(null);
   const { addToCart } = useStore();
+  const cat = categories.find((c) => c.id === product.category);
   return (
-    <article className="lcard liquid spot" style={{ '--tint': color.hex }}>
-      <div className="lcard__copy">
-        <span className="lcard__idx">0{index + 1}</span>
-        {product.badge && <span className="lcard__badge">{product.badge}</span>}
-        <h3>{product.name}</h3>
-        <p className="lcard__tag">{product.tagline}</p>
-        <ul className="lcard__hl">{product.highlights.slice(0, 3).map((h) => <li key={h}>{h}</li>)}</ul>
-        <div className="lcard__colors">
-          {product.colors.map((c) => (
-            <button key={c.name} className={`swatch ${c.name === color.name ? 'is-on' : ''}`} style={{ '--c': c.hex }} aria-label={c.name} title={c.name} onClick={() => setColor(c)} />
-          ))}
-        </div>
-        <div className="lcard__foot">
-          <span className="lcard__price"><small>From</small>{formatPrice(product.price)}</span>
-          <div className="lcard__ctas">
-            <button className="icon-btn liquid" onClick={() => addToCart(product, { color: color.name, sourceEl: imgRef.current })} aria-label={`Add ${product.name} to bag`}><PlusIcon /></button>
-            <Link to={`/product/${product.id}`} className="btn btn--primary btn--sm">Buy</Link>
-          </div>
-        </div>
+    <article className="tile" role="listitem">
+      <div>
+        <p className={`tile__eyebrow ${product.badge ? '' : 'tile__eyebrow--muted'}`}>{product.badge || cat?.name}</p>
+        <Link to={`/product/${product.id}`} className="tile__name">{product.name}</Link>
+        <p className="tile__tag">{product.tagline}</p>
       </div>
-      <div className="lcard__visual">
-        <span className="lcard__glow" />
-        {product.showcase?.color === color.name ? (
-          <div ref={imgRef} key={color.name} className="lcard__img lcard__img--wide">
-            <PhotoOrArt src={product.showcase.image} alt={product.name} art={{ ...product.art, color: color.hex }} shadow={false} />
-          </div>
-        ) : (
-          <div ref={imgRef} key={color.name} className="lcard__img"><ProductImage product={product} color={color} shadow={false} /></div>
-        )}
+      <Link to={`/product/${product.id}`} className="tile__img" ref={imgRef} tabIndex={-1} aria-hidden="true">
+        <ProductImage key={color.name} product={product} color={color} shadow={false} />
+      </Link>
+      <div className="tile__dots"><ColorDots product={product} color={color} onChange={setColor} /></div>
+      <div className="tile__foot">
+        <span className="tile__price">{product.storage?.length > 1 && <small>From</small>}{formatPrice(product.price)}</span>
+        <div className="tile__ctas">
+          <button type="button" className="add-pill" onClick={() => addToCart(product, { color: color.name, sourceEl: imgRef.current })} aria-label={`Add ${product.name} to bag`}>
+            <PlusIcon width={18} height={18} /><span>Add</span>
+          </button>
+          <Link to={`/product/${product.id}`} className="btn btn--dark btn--sm">Buy</Link>
+        </div>
       </div>
     </article>
   );
 }
 
-function Lineup() {
-  const ref = useRef(null);
-  const track = useRef(null);
-  const phones = products.filter((p) => p.category === 'iphone');
-  const isMobile = useIsMobile();
-  // Phones get a native swipe carousel instead of the scroll-pinned track.
-  useEffect(() => {
-    if (isMobile) {
-      ref.current.style.removeProperty('--dist');
-      ref.current.style.height = '';
-      return;
-    }
-    const set = () => {
-      const dist = Math.max(0, track.current.scrollWidth - window.innerWidth);
-      ref.current.style.setProperty('--dist', `${dist}px`);
-      ref.current.style.height = `${dist + window.innerHeight}px`;
-    };
-    set();
-    window.addEventListener('resize', set);
-    return () => window.removeEventListener('resize', set);
-  }, [isMobile]);
-  useScrollProgress(ref, { mobile: 0 });
+function Latest() {
   return (
-    <section ref={ref} className="lineup">
-      <div className="lineup__sticky">
-        <div className="lineup__head container">
-          <h2><SplitText text="Which iPhone is" /> <span className="grad-text"><SplitText text="right for you?" delay={200} /></span></h2>
-          <div className="lineup__progress"><span /></div>
-        </div>
-        <div ref={track} className="lineup__track">
-          {phones.map((p, i) => <LineupCard key={p.id} product={p} index={i} />)}
-          <Link to="/shop/iphone" className="lcard lcard--more liquid spot">
-            <span>Compare all models</span><ChevronRight width={28} height={28} />
-          </Link>
-        </div>
+    <section className="hsec">
+      <div className="container"><SectionHead title="The latest." sub="Take a look at what’s new." to="/shop" cta="Shop all" /></div>
+      <Rail label="Latest products">{latestIds.map((id) => <LatestCard key={id} product={getProduct(id)} />)}</Rail>
+    </section>
+  );
+}
+
+/* ----------------------------------------------------------- COMPARE */
+const compareRows = ['Display', 'Chip', 'Camera', 'Battery'];
+
+function Compare() {
+  const phones = products.filter((p) => p.category === 'iphone');
+  const [sel, setSel] = useState(() => Object.fromEntries(phones.map((p) => [p.id, p.colors[0]])));
+  const imgs = useRef({});
+  const { addToCart } = useStore();
+  return (
+    <section className="hsec">
+      <div className="container">
+        <SectionHead title="Which iPhone is right for you?" sub="Compare every model." to="/shop/iphone" cta="Shop iPhone" />
+        <Reveal className="cmp-wrap" variant="fade">
+          <div className="cmp" style={{ '--n': phones.length }}>
+            {phones.map((p) => (
+              <div key={p.id} className="cmp__head">
+                <Link to={`/product/${p.id}`} className="cmp__img" ref={(el) => { imgs.current[p.id] = el; }} tabIndex={-1} aria-hidden="true">
+                  <ProductImage key={sel[p.id].name} product={p} color={sel[p.id]} shadow={false} />
+                </Link>
+                <div className="cmp__dots"><ColorDots product={p} color={sel[p.id]} onChange={(c) => setSel((s) => ({ ...s, [p.id]: c }))} /></div>
+                <span className="cmp__badge">{p.badge}</span>
+                <h3><Link to={`/product/${p.id}`}>{p.name}</Link></h3>
+                <p className="cmp__tag">{p.tagline}</p>
+                <p className="cmp__price">From {formatPrice(p.price)}</p>
+                <div className="cmp__ctas">
+                  <Link to={`/product/${p.id}`} className="btn btn--primary btn--sm">Buy</Link>
+                  <button type="button" className="link-btn" onClick={() => addToCart(p, { color: sel[p.id].name, sourceEl: imgs.current[p.id] })}>Add to bag</button>
+                </div>
+              </div>
+            ))}
+            {compareRows.map((row) => (
+              <Fragment key={row}>
+                <p className="cmp__label"><span>{row}</span></p>
+                {phones.map((p) => <p key={p.id} className="cmp__val">{p.specs[row] || '—'}</p>)}
+              </Fragment>
+            ))}
+          </div>
+        </Reveal>
       </div>
     </section>
   );
 }
 
-/* --------------------------------------------------------- BENTO */
-const bento = [
-  { id: 'airpods-pro-3', area: 'a', fx: 'waves', kicker: 'Hear the difference.' },
-  { id: 'airpods-max', area: 'b', color: 'Purple', kicker: 'High-fidelity, over-ear.' },
-  { id: 'magsafe-battery', area: 'c', kicker: 'Snap on. Power up.' },
-  { id: 'airtag-4-pack', area: 'd', fx: 'ping', kicker: 'Never lose a thing.' },
-  { id: 'magsafe-charger', area: 'e', kicker: '25W of magnetic charging.' },
-  { id: 'silicone-case-17-pro', area: 'f', color: 'Terra Cotta', kicker: 'Soft-touch protection.' },
-];
-
-function BentoCard({ item, delay }) {
-  const p = getProduct(item.id);
-  const color = p.colors.find((c) => c.name === item.color) || p.colors[0];
+/* ------------------------------------------------------------- AUDIO */
+function RowCard({ product }) {
   const imgRef = useRef(null);
   const { addToCart } = useStore();
   return (
-    <Reveal variant="scale" delay={delay} className={`bento__cell bento__cell--${item.area}`}>
-      <div className="bcard liquid spot" data-tilt="5" style={{ '--tint': color.hex }}>
-        {item.fx && <div className={`fx fx--${item.fx}`} aria-hidden="true"><span /><span /><span /></div>}
-        <div className="bcard__copy">
-          <p className="bcard__kicker">{item.kicker}</p>
-          <Link to={`/product/${p.id}`} className="bcard__name">{p.name}</Link>
-        </div>
-        <Link to={`/product/${p.id}`} className="bcard__img" ref={imgRef}><ProductImage product={p} color={color} shadow={false} /></Link>
-        <div className="bcard__foot">
-          <span>{formatPrice(p.price)}</span>
-          <button className="add-pill" onClick={() => addToCart(p, { color: color.name, sourceEl: imgRef.current })} aria-label={`Add ${p.name} to bag`}><PlusIcon width={18} height={18} /><span>Add</span></button>
-        </div>
+    <div className="row-card">
+      <Link to={`/product/${product.id}`} className="row-card__img" ref={imgRef} tabIndex={-1} aria-hidden="true"><ProductImage product={product} shadow={false} /></Link>
+      <div className="row-card__txt">
+        <Link to={`/product/${product.id}`}>{product.name}</Link>
+        <small>{product.tagline}</small>
+        <span className="row-card__price">{formatPrice(product.price)}</span>
       </div>
-    </Reveal>
+      <button type="button" className="add-pill" onClick={() => addToCart(product, { color: product.colors[0].name, sourceEl: imgRef.current })} aria-label={`Add ${product.name} to bag`}>
+        <PlusIcon width={18} height={18} /><span>Add</span>
+      </button>
+    </div>
   );
 }
 
-function Bento() {
+function Audio() {
+  const pro = getProduct('airpods-pro-3');
+  const max = getProduct('airpods-max');
+  const [maxColor, setMaxColor] = useState(max.colors[0]);
+  const proRef = useRef(null);
+  const maxRef = useRef(null);
+  const { addToCart } = useStore();
   return (
-    <section className="section container">
-      <h2 className="section__title"><SplitText text="Sound. Power." /><br /><span className="muted"><SplitText text="Everything else you love." delay={150} /></span></h2>
-      <div className="bento">
-        {bento.map((b, i) => <BentoCard key={b.id} item={b} delay={i * 80} />)}
-      </div>
-    </section>
-  );
-}
-
-/* ------------------------------------------------------- BATTERY */
-function Battery() {
-  const ref = useRef(null);
-  const num = useRef(null);
-  const banks = products.filter((p) => p.category === 'powerbanks');
-  useScrollProgress(ref, {
-    mobile: 'through',
-    onUpdate: (p) => { if (num.current) num.current.textContent = Math.round(Math.min(1, p * 1.3) * 100); },
-  });
-  return (
-    <section ref={ref} className="battery">
-      <div className="battery__sticky container">
-        <div className="battery__copy">
-          <p className="eyebrow">Power banks</p>
-          <h2><SplitText text="Never hit" /> <span className="battery__zero"><SplitText text="0%" delay={150} /></span> <SplitText text="again." delay={250} /></h2>
-          <p className="muted">From pocket-size MagSafe packs to a 65W powerhouse that charges your laptop.</p>
-          <ul className="battery__list">
-            {banks.map((b) => (
-              <li key={b.id}>
-                <Link to={`/product/${b.id}`} className="mini liquid spot">
-                  <span className="mini__img"><ProductImage product={b} shadow={false} /></span>
-                  <span className="mini__txt"><strong>{b.name}</strong><small>{b.highlights[0]}</small></span>
-                  <span className="mini__price">{formatPrice(b.price)}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="battery__visual" aria-hidden="true">
-          <div className="battery__cap" />
-          <div className="battery__body">
-            <div className="battery__fill">
-              <svg className="battery__wave" viewBox="0 0 600 40" preserveAspectRatio="none"><path d="M0 20 Q 75 0 150 20 T 300 20 T 450 20 T 600 20 V40 H0z" /></svg>
-              <span className="battery__bubbles"><i /><i /><i /><i /><i /></span>
-            </div>
-            <div className="battery__pct"><b ref={num}>0</b><span>%</span></div>
-            <svg className="battery__bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z" /></svg>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ------------------------------------------------------- PROMISE */
-function Pledge() {
-  const items = [
-    [TruckIcon, 'Free delivery', <><Counter prefix="$" to={STORE.freeShippingThreshold} />+</>, 'orders ship free'],
-    [ShieldIcon, 'Warranty', <><Counter to={1} /> yr</>, 'manufacturer warranty'],
-    [ReturnIcon, 'Returns', <><Counter to={14} /> days</>, 'free, no-questions returns'],
-    [TradeIcon, 'Dispatch', <>&lt;<Counter to={24} />h</>, 'same-day dispatch'],
-  ];
-  return (
-    <section className="section promise">
+    <section className="hsec">
       <div className="container">
-        <h2 className="section__title"><SplitText text={`The ${STORE.name} promise.`} /></h2>
-        <div className="promise__grid">
-          {items.map(([Icon, label, big, sub], i) => (
-            <Reveal key={label} delay={i * 90} variant="up" className="promise__cell">
-              <div className="pcell liquid spot">
-                <span className="pcell__icon"><Icon width={22} height={22} /></span>
-                <p className="pcell__label">{label}</p>
-                <p className="pcell__big">{big}</p>
-                <p className="pcell__sub">{sub}</p>
+        <SectionHead title="Sound that moves you." sub="Every AirPods, in one place." to="/shop/airpods" cta="Shop AirPods" />
+        <div className="audio">
+          <Reveal className="audio__cell">
+            <article className="feat">
+              <div className="feat__copy">
+                <p className="feat__eyebrow">{pro.badge}</p>
+                <h3><Link to={`/product/${pro.id}`}>{pro.name}</Link></h3>
+                <p>{pro.tagline}</p>
+                <ul className="feat__chips">{pro.highlights.slice(0, 3).map((h) => <li key={h}>{h}</li>)}</ul>
               </div>
-            </Reveal>
+              <Link to={`/product/${pro.id}`} className="feat__img" ref={proRef} tabIndex={-1} aria-hidden="true"><ProductImage product={pro} shadow={false} /></Link>
+              <div className="feat__foot">
+                <span className="feat__price">{formatPrice(pro.price)}</span>
+                <div className="feat__ctas">
+                  <button type="button" className="add-pill" onClick={() => addToCart(pro, { color: pro.colors[0].name, sourceEl: proRef.current })} aria-label={`Add ${pro.name} to bag`}><PlusIcon width={18} height={18} /><span>Add</span></button>
+                  <Link to={`/product/${pro.id}`} className="btn btn--dark btn--sm">Buy</Link>
+                </div>
+              </div>
+            </article>
+          </Reveal>
+          <Reveal delay={100} className="audio__cell">
+            <article className="feat feat--tint" style={{ '--tint': maxColor.hex }}>
+              <div className="feat__copy">
+                <p className="feat__eyebrow feat__eyebrow--muted">Over-ear</p>
+                <h3><Link to={`/product/${max.id}`}>{max.name}</Link></h3>
+                <p>{max.tagline}</p>
+              </div>
+              <Link to={`/product/${max.id}`} className="feat__img" ref={maxRef} tabIndex={-1} aria-hidden="true">
+                <ProductImage key={maxColor.name} product={max} color={maxColor} shadow={false} />
+              </Link>
+              <div className="feat__foot">
+                <div className="feat__color">
+                  <ColorDots product={max} color={maxColor} onChange={setMaxColor} />
+                  <span aria-live="polite">{maxColor.name}</span>
+                </div>
+                <div className="feat__ctas">
+                  <span className="feat__price">{formatPrice(max.price)}</span>
+                  <button type="button" className="add-pill" onClick={() => addToCart(max, { color: maxColor.name, sourceEl: maxRef.current })} aria-label={`Add ${max.name} to bag`}><PlusIcon width={18} height={18} /><span>Add</span></button>
+                </div>
+              </div>
+            </article>
+          </Reveal>
+        </div>
+        <div className="row-cards">
+          {['airpods-4-anc', 'airpods-4'].map((id, i) => <Reveal key={id} delay={i * 80}><RowCard product={getProduct(id)} /></Reveal>)}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------- ESSENTIALS */
+const essentialGroups = [
+  { id: 'power', label: 'Power banks', ids: ['magsafe-battery', 'powercore-10k', 'powercore-20k'] },
+  { id: 'charging', label: 'Charging', ids: ['magsafe-charger', 'usb-c-20w-adapter', 'usb-c-cable'] },
+  { id: 'cases', label: 'Cases', ids: ['silicone-case-17-pro', 'clear-case-17-pro'] },
+  { id: 'tracking', label: 'AirTag', ids: ['airtag-4-pack'] },
+];
+const allEssentials = essentialGroups.flatMap((g) => g.ids);
+const essentialFilters = [{ id: 'all', label: 'All', ids: allEssentials }, ...essentialGroups];
+
+function Essentials() {
+  const [group, setGroup] = useState('all');
+  const ids = essentialFilters.find((g) => g.id === group).ids;
+  return (
+    <section className="hsec">
+      <div className="container">
+        <SectionHead title="Essentials." sub="Keep everything charged and protected." to="/shop/accessories" cta="All accessories" />
+        <div className="fchips" role="group" aria-label="Filter essentials">
+          {essentialFilters.map((f) => (
+            <button key={f.id} type="button" className={`fchip ${group === f.id ? 'is-on' : ''}`} aria-pressed={group === f.id} onClick={() => setGroup(f.id)}>
+              {f.label}<span>{f.ids.length}</span>
+            </button>
           ))}
         </div>
+        <div key={group} className="grid ess-grid">
+          {ids.map((id, i) => <div key={id} className="ess-item" style={{ '--i': i }}><ProductCard product={getProduct(id)} /></div>)}
+        </div>
       </div>
     </section>
   );
 }
 
-/* ------------------------------------------------------------ CTA */
-function Cta() {
+/* ------------------------------------------------------------- PERKS */
+function Perks() {
+  const pickup = STORE.shippingOptions.find((o) => o.id === 'pickup');
+  const perks = [
+    [TruckIcon, 'Free delivery', `On orders over ${formatPrice(STORE.freeShippingThreshold)}.`],
+    [ReturnIcon, 'Free 14-day returns', 'No questions asked.'],
+    [ShieldIcon, '1-year warranty', 'Genuine products, fully covered.'],
+    [StoreIcon, 'Store pickup', pickup ? `${pickup.eta}.` : 'Collect in store.'],
+  ];
+  return (
+    <section className="hsec">
+      <div className="container">
+        <Reveal className="perks">
+          {perks.map(([Icon, title, text]) => (
+            <div key={title} className="perk">
+              <span className="perk__icon"><Icon width={22} height={22} /></span>
+              <div><strong>{title}</strong><p>{text}</p></div>
+            </div>
+          ))}
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------- NEWSLETTER */
+function Newsletter() {
   const { notify } = useStore();
   return (
-    <section className="cta">
-      <div className="container cta__inner">
-        <h2 className="cta__title"><SplitText text="Stay" by="char" /> <span className="grad-text"><SplitText text="charged." by="char" delay={200} /></span></h2>
-        <Reveal variant="blur" delay={300}><p className="muted">Launch alerts, exclusive drops and early access — straight to your inbox.</p></Reveal>
-        <Reveal variant="up" delay={450}>
-          <form className="cta__form liquid" onSubmit={(e) => { e.preventDefault(); e.target.reset(); notify('You’re on the list ✓'); }}>
-            <input type="email" required placeholder="you@email.com" aria-label="Email address" />
-            <button className="btn btn--primary" data-magnetic>Subscribe</button>
-          </form>
+    <section className="hsec hsec--last">
+      <div className="container">
+        <Reveal className="news">
+          <div>
+            <p className="eyebrow">Stay in the loop</p>
+            <h2>Launch alerts, exclusive drops and early access.</h2>
+            <p className="news__sub">Be first to know when new devices land at {STORE.name}.</p>
+          </div>
+          <div>
+            <form className="news__form" onSubmit={(e) => { e.preventDefault(); e.target.reset(); notify('You’re on the list ✓'); }}>
+              <label htmlFor="news-email" className="sr-only">Email address</label>
+              <input id="news-email" type="email" required placeholder="you@email.com" autoComplete="email" />
+              <button className="btn btn--primary">Subscribe</button>
+            </form>
+            <p className="news__fine">No spam. Unsubscribe anytime.</p>
+          </div>
         </Reveal>
       </div>
     </section>
@@ -336,20 +433,16 @@ function Cta() {
 }
 
 export default function Home() {
-  const names = ['iPhone 17 Pro Max', 'AirPods Pro 3', 'iPhone Air', 'MagSafe', 'AirPods Max', 'PowerCore 20K', 'iPhone 17', 'AirTag'];
   return (
     <>
       <Hero />
-      <div className="marquees">
-        <Marquee items={names} speed={38} />
-        <Marquee items={['Free delivery', 'Genuine products', '14-day returns', 'Trade-in credit', 'Same-day dispatch']} reverse outline speed={46} />
-      </div>
-      <Statement />
-      <Lineup />
-      <Bento />
-      <Battery />
-      <Pledge />
-      <Cta />
+      <Categories />
+      <Latest />
+      <Compare />
+      <Audio />
+      <Essentials />
+      <Perks />
+      <Newsletter />
     </>
   );
 }
