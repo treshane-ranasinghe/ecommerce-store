@@ -8,6 +8,7 @@ import { ProductImage, PhotoOrArt } from '../components/ProductArt';
 import { products, categories, getProduct } from '../data/products';
 import { formatPrice, STORE, HERO } from '../config';
 import { useStore } from '../context/StoreContext';
+import { tintFor } from '../lib/tint';
 import { PlusIcon, ChevronLeft, ChevronRight, TruckIcon, ShieldIcon, ReturnIcon, StoreIcon, BagIcon } from '../components/Icons';
 
 /* ------------------------------------------------------------------ HERO */
@@ -96,9 +97,10 @@ function Hero() {
 }
 
 /* ------------------------------------------------------------ SHARED */
-function SectionHead({ title, sub, to, cta }) {
+// `tone` picks the gradient used for the subtitle (see .shead--* in pages.css).
+function SectionHead({ title, sub, to, cta, tone }) {
   return (
-    <Reveal className="shead">
+    <Reveal className={`shead ${tone ? `shead--${tone}` : ''}`}>
       <h2 className="shead__title">{title} <span>{sub}</span></h2>
       {to && <Link to={to} className="shead__link">{cta}<ChevronRight width={16} height={16} /></Link>}
     </Reveal>
@@ -162,7 +164,7 @@ function Categories() {
   return (
     <section className="hsec hsec--first">
       <div className="container">
-        <SectionHead title="Shop by category." sub="Find exactly what you need." to="/shop" cta="Browse all" />
+        <SectionHead title="Shop by category." sub="Find exactly what you need." to="/shop" cta="Browse all" tone="sunset" />
         <div className="cats">
           {categories.map((c, i) => {
             const [id, colorName] = categoryArt[c.id];
@@ -171,7 +173,7 @@ function Categories() {
             const count = products.filter((x) => x.category === c.id).length;
             return (
               <Reveal key={c.id} delay={i * 70} className="cats__cell">
-                <Link to={`/shop/${c.id}`} className="cat">
+                <Link to={`/shop/${c.id}`} className="cat" style={{ '--accent': c.accent }}>
                   <span className="cat__txt"><strong>{c.name}</strong><small>{count} products</small></span>
                   <span className="cat__img"><ProductImage product={p} color={color} shadow={false} /></span>
                   <span className="cat__go" aria-hidden="true"><ChevronRight width={16} height={16} /></span>
@@ -194,7 +196,7 @@ function LatestCard({ product }) {
   const { addToCart } = useStore();
   const cat = categories.find((c) => c.id === product.category);
   return (
-    <article className="tile" role="listitem">
+    <article className="tile" role="listitem" style={{ '--tint': tintFor(product, color) }}>
       <div>
         <p className={`tile__eyebrow ${product.badge ? '' : 'tile__eyebrow--muted'}`}>{product.badge || cat?.name}</p>
         <Link to={`/product/${product.id}`} className="tile__name">{product.name}</Link>
@@ -220,7 +222,7 @@ function LatestCard({ product }) {
 function Latest() {
   return (
     <section className="hsec">
-      <div className="container"><SectionHead title="The latest." sub="Take a look at what’s new." to="/shop" cta="Shop all" /></div>
+      <div className="container"><SectionHead title="The latest." sub="Take a look at what’s new." to="/shop" cta="Shop all" tone="ocean" /></div>
       <Rail label="Latest products">{latestIds.map((id) => <LatestCard key={id} product={getProduct(id)} />)}</Rail>
     </section>
   );
@@ -237,11 +239,11 @@ function Compare() {
   return (
     <section className="hsec">
       <div className="container">
-        <SectionHead title="Which iPhone is right for you?" sub="Compare every model." to="/shop/iphone" cta="Shop iPhone" />
+        <SectionHead title="Which iPhone is right for you?" sub="Compare every model." to="/shop/iphone" cta="Shop iPhone" tone="berry" />
         <Reveal className="cmp-wrap" variant="fade">
           <div className="cmp" style={{ '--n': phones.length }}>
             {phones.map((p) => (
-              <div key={p.id} className="cmp__head">
+              <div key={p.id} className="cmp__head" style={{ '--tint': tintFor(p, sel[p.id]) }}>
                 <Link to={`/product/${p.id}`} className="cmp__img" ref={(el) => { imgs.current[p.id] = el; }} tabIndex={-1} aria-hidden="true">
                   <ProductImage key={sel[p.id].name} product={p} color={sel[p.id]} shadow={false} />
                 </Link>
@@ -262,6 +264,60 @@ function Compare() {
                 {phones.map((p) => <p key={p.id} className="cmp__val">{p.specs[row] || '—'}</p>)}
               </Fragment>
             ))}
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------ COLOR STUDIO */
+// Full-width stage whose backdrop takes on the selected finish. Cycles through the colours
+// while on screen until the visitor picks one.
+function ColorStudio() {
+  const p = getProduct('iphone-17');
+  const [index, setIndex] = useState(0);
+  const [auto, setAuto] = useState(true);
+  const ref = useRef(null);
+  const imgRef = useRef(null);
+  const { addToCart } = useStore();
+  useEffect(() => {
+    if (!auto || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let timer = 0;
+    const io = new IntersectionObserver(([e]) => {
+      clearInterval(timer);
+      if (e.isIntersecting) timer = setInterval(() => setIndex((n) => (n + 1) % p.colors.length), 3200);
+    }, { threshold: 0.4 });
+    io.observe(ref.current);
+    return () => { io.disconnect(); clearInterval(timer); };
+  }, [auto, p.colors.length]);
+  const color = p.colors[index];
+  const pick = (n) => { setAuto(false); setIndex(n); };
+  return (
+    <section className="hsec">
+      <div className="container">
+        <Reveal variant="scale">
+          <div ref={ref} className="studio" style={{ '--tint': tintFor(p, color) }}>
+            <div className="studio__copy">
+              <p className="studio__eyebrow">{p.name} · {p.tagline}</p>
+              <h2>Find your color.</h2>
+              <p key={color.name} className="studio__name" aria-live="polite">{color.name}</p>
+              <div className="studio__swatches" role="radiogroup" aria-label={`${p.name} color`}>
+                {p.colors.map((c, n) => (
+                  <button key={c.name} type="button" role="radio" aria-checked={n === index} className={`studio__sw ${n === index ? 'is-on' : ''}`} style={{ '--c': c.hex }} onClick={() => pick(n)}>
+                    <i />{c.name}
+                  </button>
+                ))}
+              </div>
+              <div className="studio__foot">
+                <span className="studio__price"><small>From</small>{formatPrice(p.price)}</span>
+                <button type="button" className="add-pill" onClick={() => addToCart(p, { color: color.name, sourceEl: imgRef.current })} aria-label={`Add ${p.name} in ${color.name} to bag`}><PlusIcon width={18} height={18} /><span>Add</span></button>
+                <Link to={`/product/${p.id}`} className="btn btn--dark">Buy {p.name}</Link>
+              </div>
+            </div>
+            <Link to={`/product/${p.id}`} className="studio__img" ref={imgRef} tabIndex={-1} aria-hidden="true">
+              <ProductImage key={color.name} product={p} color={color} shadow={false} />
+            </Link>
           </div>
         </Reveal>
       </div>
@@ -298,10 +354,10 @@ function Audio() {
   return (
     <section className="hsec">
       <div className="container">
-        <SectionHead title="Sound that moves you." sub="Every AirPods, in one place." to="/shop/airpods" cta="Shop AirPods" />
+        <SectionHead title="Sound that moves you." sub="Every AirPods, in one place." to="/shop/airpods" cta="Shop AirPods" tone="aqua" />
         <div className="audio">
           <Reveal className="audio__cell">
-            <article className="feat">
+            <article className="feat feat--pro">
               <div className="feat__copy">
                 <p className="feat__eyebrow">{pro.badge}</p>
                 <h3><Link to={`/product/${pro.id}`}>{pro.name}</Link></h3>
@@ -319,7 +375,7 @@ function Audio() {
             </article>
           </Reveal>
           <Reveal delay={100} className="audio__cell">
-            <article className="feat feat--tint" style={{ '--tint': maxColor.hex }}>
+            <article className="feat feat--tint" style={{ '--tint': tintFor(max, maxColor) }}>
               <div className="feat__copy">
                 <p className="feat__eyebrow feat__eyebrow--muted">Over-ear</p>
                 <h3><Link to={`/product/${max.id}`}>{max.name}</Link></h3>
@@ -351,13 +407,13 @@ function Audio() {
 
 /* -------------------------------------------------------- ESSENTIALS */
 const essentialGroups = [
-  { id: 'power', label: 'Power banks', ids: ['magsafe-battery', 'powercore-10k', 'powercore-20k'] },
-  { id: 'charging', label: 'Charging', ids: ['magsafe-charger', 'usb-c-20w-adapter', 'usb-c-cable'] },
-  { id: 'cases', label: 'Cases', ids: ['silicone-case-17-pro', 'clear-case-17-pro'] },
-  { id: 'tracking', label: 'AirTag', ids: ['airtag-4-pack'] },
+  { id: 'power', label: 'Power banks', color: '#15803d', ids: ['magsafe-battery', 'powercore-10k', 'powercore-20k'] },
+  { id: 'charging', label: 'Charging', color: '#b45309', ids: ['magsafe-charger', 'usb-c-20w-adapter', 'usb-c-cable'] },
+  { id: 'cases', label: 'Cases', color: '#be185d', ids: ['silicone-case-17-pro', 'clear-case-17-pro'] },
+  { id: 'tracking', label: 'AirTag', color: '#1d4ed8', ids: ['airtag-4-pack'] },
 ];
 const allEssentials = essentialGroups.flatMap((g) => g.ids);
-const essentialFilters = [{ id: 'all', label: 'All', ids: allEssentials }, ...essentialGroups];
+const essentialFilters = [{ id: 'all', label: 'All', color: '#1d1d1f', ids: allEssentials }, ...essentialGroups];
 
 function Essentials() {
   const [group, setGroup] = useState('all');
@@ -365,10 +421,10 @@ function Essentials() {
   return (
     <section className="hsec">
       <div className="container">
-        <SectionHead title="Essentials." sub="Keep everything charged and protected." to="/shop/accessories" cta="All accessories" />
+        <SectionHead title="Essentials." sub="Keep everything charged and protected." to="/shop/accessories" cta="All accessories" tone="lime" />
         <div className="fchips" role="group" aria-label="Filter essentials">
           {essentialFilters.map((f) => (
-            <button key={f.id} type="button" className={`fchip ${group === f.id ? 'is-on' : ''}`} aria-pressed={group === f.id} onClick={() => setGroup(f.id)}>
+            <button key={f.id} type="button" className={`fchip fchip--${f.id} ${group === f.id ? 'is-on' : ''}`} style={{ '--chip': f.color }} aria-pressed={group === f.id} onClick={() => setGroup(f.id)}>
               {f.label}<span>{f.ids.length}</span>
             </button>
           ))}
@@ -385,17 +441,17 @@ function Essentials() {
 function Perks() {
   const pickup = STORE.shippingOptions.find((o) => o.id === 'pickup');
   const perks = [
-    [TruckIcon, 'Free delivery', `On orders over ${formatPrice(STORE.freeShippingThreshold)}.`],
-    [ReturnIcon, 'Free 14-day returns', 'No questions asked.'],
-    [ShieldIcon, '1-year warranty', 'Genuine products, fully covered.'],
-    [StoreIcon, 'Store pickup', pickup ? `${pickup.eta}.` : 'Collect in store.'],
+    [TruckIcon, 'Free delivery', `On orders over ${formatPrice(STORE.freeShippingThreshold)}.`, '#2563eb'],
+    [ReturnIcon, 'Free 14-day returns', 'No questions asked.', '#16a34a'],
+    [ShieldIcon, '1-year warranty', 'Genuine products, fully covered.', '#ea580c'],
+    [StoreIcon, 'Store pickup', pickup ? `${pickup.eta}.` : 'Collect in store.', '#7c3aed'],
   ];
   return (
     <section className="hsec">
       <div className="container">
         <Reveal className="perks">
-          {perks.map(([Icon, title, text]) => (
-            <div key={title} className="perk">
+          {perks.map(([Icon, title, text, pc]) => (
+            <div key={title} className="perk" style={{ '--pc': pc }}>
               <span className="perk__icon"><Icon width={22} height={22} /></span>
               <div><strong>{title}</strong><p>{text}</p></div>
             </div>
@@ -438,6 +494,7 @@ export default function Home() {
       <Hero />
       <Categories />
       <Latest />
+      <ColorStudio />
       <Compare />
       <Audio />
       <Essentials />

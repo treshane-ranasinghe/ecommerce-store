@@ -154,7 +154,10 @@ html:not(.ready) .nav__pill { animation-play-state: paused; }
   --tint: #8e8e93;
   position: relative; display: flex; flex-direction: column; height: 100%;
   border-radius: var(--radius); overflow: hidden;
-  transition: transform 0.6s var(--ease-out), translate 0.6s var(--ease-out), box-shadow 0.6s var(--ease-out);
+  background:
+    radial-gradient(85% 55% at 50% 36%, color-mix(in srgb, var(--tint) 26%, transparent), transparent 72%),
+    linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--tint) 8%, var(--surface)));
+  transition: --tint 0.8s var(--ease), transform 0.6s var(--ease-out), translate 0.6s var(--ease-out), box-shadow 0.6s var(--ease-out);
 }
 @media (hover: hover) { .pcard:hover { translate: 0 -4px; box-shadow: var(--shadow-lg); } }
 /* The image is absolutely inset so a photo's intrinsic size can't stretch the aspect-ratio box. */
@@ -279,8 +282,9 @@ html:not(.ready) .nav__pill { animation-play-state: paused; }
 .footer__mark {
   font-family: var(--display); font-weight: 800; font-size: clamp(90px, 26vw, 380px); line-height: 0.8; letter-spacing: -0.06em; text-align: center;
   margin: 10px 0 24px; user-select: none;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0) 85%);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
+  background: linear-gradient(90deg, #ff6b2c, #e11d74 35%, #7c3aed 65%, #0a84ff);
+  -webkit-background-clip: text; background-clip: text; color: transparent; opacity: 0.22;
+  -webkit-mask-image: linear-gradient(180deg, #000 15%, transparent 90%); mask-image: linear-gradient(180deg, #000 15%, transparent 90%);
 }
 .footer__base { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding-top: 18px; border-top: 1px solid var(--line-2); }
 .footer__legal { display: flex; gap: 18px; }

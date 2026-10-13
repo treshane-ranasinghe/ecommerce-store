@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useStore } from '../context/StoreContext';
 import { formatPrice } from '../config';
 import { ProductImage } from './ProductArt';
+import { tintFor } from '../lib/tint';
 import { HeartIcon, PlusIcon } from './Icons';
 
 export default function ProductCard({ product }) {
@@ -13,7 +14,7 @@ export default function ProductCard({ product }) {
   const from = product.storage?.length > 1;
 
   return (
-    <article className="pcard liquid spot" data-tilt="6" style={{ '--tint': color?.hex || '#8e8e93' }}>
+    <article className="pcard liquid spot" data-tilt="6" style={{ '--tint': tintFor(product, color) }}>
       {product.badge && <span className="pcard__badge">{product.badge}</span>}
       <button className={`pcard__heart ${saved ? 'is-on' : ''}`} onClick={() => toggleWishlist(product.id)} aria-label={saved ? 'Remove from saved' : 'Save for later'}>
         <HeartIcon width={18} height={18} />
