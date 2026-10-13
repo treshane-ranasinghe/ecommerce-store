@@ -2,10 +2,10 @@
 // `image`: path/URL to a product photo (per colour via `colors[].image`, or `product.image`).
 //          Photos live in public/products/. Leave null to use the built-in SVG illustration (`art`).
 export const categories = [
-  { id: 'iphone', name: 'iPhone', blurb: 'Pro power. All-day battery.' },
-  { id: 'airpods', name: 'AirPods', blurb: 'Sound that surrounds you.' },
-  { id: 'powerbanks', name: 'Power Banks', blurb: 'Charge anywhere, anytime.' },
-  { id: 'accessories', name: 'Accessories', blurb: 'Cases, chargers & more.' },
+  { id: 'iphone', name: 'iPhone', blurb: 'Pro power. All-day battery.', accent: '#ff6b2c' },
+  { id: 'airpods', name: 'AirPods', blurb: 'Sound that surrounds you.', accent: '#0a84ff' },
+  { id: 'powerbanks', name: 'Power Banks', blurb: 'Charge anywhere, anytime.', accent: '#22c55e' },
+  { id: 'accessories', name: 'Accessories', blurb: 'Cases, chargers & more.', accent: '#a855f7' },
 ];
 
 const iphoneStorage = (base) => [
