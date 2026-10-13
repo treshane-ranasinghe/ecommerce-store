@@ -99,7 +99,7 @@ html:not(.ready) .nav__pill { animation-play-state: paused; }
 .search-results__txt { flex: 1; display: grid; }
 .search-results strong { color: var(--text); font-weight: 600; }
 .search-results small { font-size: 13px; }
-.search-thumb .product-art, .line__img .product-art, .island__thumb .product-art, .mini__img .product-art, .thumb .product-art { width: 100%; height: 100%; }
+.search-thumb .product-art, .line__img .product-art, .island__thumb .product-art, .thumb .product-art { width: 100%; height: 100%; }
 .search-thumb { display: block; width: 56px; height: 56px; border-radius: 16px; background: var(--surface); padding: 5px; flex-shrink: 0; }
 .quick-links { margin-top: 26px; }
 .quick-links__row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
@@ -157,9 +157,10 @@ html:not(.ready) .nav__pill { animation-play-state: paused; }
   transition: transform 0.6s var(--ease-out), translate 0.6s var(--ease-out), box-shadow 0.6s var(--ease-out);
 }
 @media (hover: hover) { .pcard:hover { translate: 0 -4px; box-shadow: var(--shadow-lg); } }
-.pcard__media { position: relative; display: block; aspect-ratio: 1 / 0.92; padding: 34px 26px 6px; }
+/* The image is absolutely inset so a photo's intrinsic size can't stretch the aspect-ratio box. */
+.pcard__media { --inset: 34px 26px 6px; position: relative; display: block; aspect-ratio: 1 / 0.92; }
 .pcard__glow { display: none; }
-.pcard__img { position: relative; display: block; width: 100%; height: 100%; transition: transform 0.8s var(--ease-out); }
+.pcard__img { position: absolute; inset: var(--inset); display: block; transition: transform 0.8s var(--ease-out); }
 .pcard__art { width: 100%; height: 100%; animation: artIn 0.6s var(--ease-out); }
 @media (hover: hover) { .pcard:hover .pcard__img { transform: translateY(-6px) scale(1.04); } }
 @keyframes artIn { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
@@ -186,8 +187,8 @@ html:not(.ready) .nav__pill { animation-play-state: paused; }
 .add-pill span { max-width: 0; opacity: 0; transition: max-width 0.5s var(--ease-out), opacity 0.3s; white-space: nowrap; }
 .add-pill svg { transition: transform 0.5s var(--ease-out); }
 @media (hover: hover) {
-  .add-pill:hover, .pcard:hover .add-pill, .bcard:hover .add-pill { gap: 6px; padding: 0 18px 0 14px; }
-  .add-pill:hover span, .pcard:hover .add-pill span, .bcard:hover .add-pill span { max-width: 60px; opacity: 1; }
+  .add-pill:hover, .pcard:hover .add-pill, .tile:hover .add-pill, .row-card:hover .add-pill { gap: 6px; padding: 0 18px 0 14px; }
+  .add-pill:hover span, .pcard:hover .add-pill span, .tile:hover .add-pill span, .row-card:hover .add-pill span { max-width: 60px; opacity: 1; }
   .add-pill:hover { background: var(--accent-hover); }
   .add-pill:hover svg { transform: rotate(90deg); }
 }
@@ -302,14 +303,3 @@ html:not(.ready) .nav__pill { animation-play-state: paused; }
 .preloader__bar span { display: block; height: 100%; background: var(--text); transform-origin: left; }
 .preloader__num { position: absolute; right: 28px; bottom: 18px; font-family: var(--display); font-size: clamp(64px, 14vw, 160px); font-weight: 700; letter-spacing: -0.05em; line-height: 1; color: rgba(0, 0, 0, 0.06); font-variant-numeric: tabular-nums; transition: opacity 0.4s; }
 .preloader.is-out .preloader__num { opacity: 0; }
-
-/* ================================================================ MARQUEE */
-.marquees { position: relative; z-index: 2; padding: 28px 0; border-block: 1px solid var(--line); background: var(--bg); overflow: hidden; display: grid; gap: 6px; }
-.marquee { overflow: hidden; transform: skewX(var(--skew, 0deg)); }
-.marquee__track { display: flex; width: max-content; animation: marquee var(--speed) linear infinite; will-change: transform; }
-.marquee--rev .marquee__track { animation-direction: reverse; }
-.marquee__item { display: inline-flex; align-items: center; gap: 28px; padding-right: 28px; font-family: var(--display); font-weight: 700; font-size: clamp(32px, 6vw, 84px); letter-spacing: -0.04em; line-height: 1.05; white-space: nowrap; }
-.marquee--outline .marquee__item { color: transparent; -webkit-text-stroke: 1.2px rgba(0, 0, 0, 0.25); }
-.marquee__star { font-style: normal; font-size: 0.45em; color: var(--accent); -webkit-text-stroke: 0; }
-@keyframes marquee { to { transform: translateX(-50%); } }
-.marquee:hover .marquee__track { animation-play-state: paused; }
