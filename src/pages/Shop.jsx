@@ -49,7 +49,6 @@ export default function Shop() {
   return (
     <div className="shop">
       <header className="shop__hero container">
-        <div className="aurora aurora--soft" aria-hidden="true"><span /><span /><span /><span /></div>
         <p className="eyebrow anim-in">{cat ? 'Category' : `${products.length} products`}</p>
         <h1 key={category || 'all'} className="shop__title"><SplitText text={cat ? cat.name : 'Store.'} by="char" play stagger={40} /></h1>
         <p className="shop__sub anim-in" style={{ '--d': '300ms' }}>{cat ? cat.blurb : 'The best way to buy the products you love.'}</p>

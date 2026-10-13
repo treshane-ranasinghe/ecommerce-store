@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import useScrollProgress from '../hooks/useScrollProgress';
+import useScrollProgress, { useIsMobile } from '../hooks/useScrollProgress';
 import Reveal from '../components/Reveal';
 import SplitText from '../components/SplitText';
 import Marquee from '../components/Marquee';
@@ -25,7 +25,7 @@ function Hero() {
   const product = getProduct(HERO.productId);
   const [color, setColor] = useState(product.colors[0]);
   const { addToCart } = useStore();
-  useScrollProgress(ref);
+  useScrollProgress(ref, { mobile: 0 });
 
   const onMove = (e) => {
     if (e.pointerType !== 'mouse') return;
@@ -37,9 +37,6 @@ function Hero() {
   return (
     <section ref={ref} className={`hero gate ${HERO.image && HERO.imageLayout === 'wide' ? 'hero--wide' : ''}`} style={{ '--hc': color.hex }} onPointerMove={onMove}>
       <div className="hero__sticky">
-        <div className="aurora" aria-hidden="true"><span /><span /><span /><span /></div>
-        <div className="hero__rings" aria-hidden="true"><span /><span /><span /></div>
-
         <div className="hero__head">
           <p className="hero__eyebrow anim-in" style={{ '--d': '0ms' }}><span>{HERO.eyebrow}</span>{HERO.title}</p>
         </div>
@@ -102,7 +99,7 @@ function Hero() {
 /* ------------------------------------------------------- WORD REVEAL */
 function Statement() {
   const ref = useRef(null);
-  useScrollProgress(ref);
+  useScrollProgress(ref, { mobile: 1 });
   const parts = [
     ['The most powerful', 0], ['iPhones.', 1], ['The most immersive', 0], ['AirPods.', 1],
     ['And every accessory that keeps you', 0], ['charged,', 1], ['protected and connected —', 0], ['delivered to your door.', 0],
@@ -166,7 +163,14 @@ function Lineup() {
   const ref = useRef(null);
   const track = useRef(null);
   const phones = products.filter((p) => p.category === 'iphone');
+  const isMobile = useIsMobile();
+  // Phones get a native swipe carousel instead of the scroll-pinned track.
   useEffect(() => {
+    if (isMobile) {
+      ref.current.style.removeProperty('--dist');
+      ref.current.style.height = '';
+      return;
+    }
     const set = () => {
       const dist = Math.max(0, track.current.scrollWidth - window.innerWidth);
       ref.current.style.setProperty('--dist', `${dist}px`);
@@ -175,8 +179,8 @@ function Lineup() {
     set();
     window.addEventListener('resize', set);
     return () => window.removeEventListener('resize', set);
-  }, []);
-  useScrollProgress(ref);
+  }, [isMobile]);
+  useScrollProgress(ref, { mobile: 0 });
   return (
     <section ref={ref} className="lineup">
       <div className="lineup__sticky">
@@ -245,6 +249,7 @@ function Battery() {
   const num = useRef(null);
   const banks = products.filter((p) => p.category === 'powerbanks');
   useScrollProgress(ref, {
+    mobile: 'through',
     onUpdate: (p) => { if (num.current) num.current.textContent = Math.round(Math.min(1, p * 1.3) * 100); },
   });
   return (
@@ -316,7 +321,6 @@ function Cta() {
   const { notify } = useStore();
   return (
     <section className="cta">
-      <div className="aurora aurora--soft" aria-hidden="true"><span /><span /><span /><span /></div>
       <div className="container cta__inner">
         <h2 className="cta__title"><SplitText text="Stay" by="char" /> <span className="grad-text"><SplitText text="charged." by="char" delay={200} /></span></h2>
         <Reveal variant="blur" delay={300}><p className="muted">Launch alerts, exclusive drops and early access — straight to your inbox.</p></Reveal>

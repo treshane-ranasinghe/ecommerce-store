@@ -42,7 +42,6 @@ export default function App() {
 
   return (
     <>
-      <div className="aura" aria-hidden="true" />
       {intro && <Preloader onDone={done} />}
       <Navbar />
       <main key={pathname} className="page">

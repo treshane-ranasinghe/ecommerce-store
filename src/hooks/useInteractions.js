@@ -1,12 +1,11 @@
 import { useEffect } from 'react';
 
-// One global pointer listener drives: cursor aura, card spotlights (.spot),
+// One global pointer listener drives: card spotlights (.spot),
 // 3D tilt ([data-tilt="deg"]) and magnetic buttons ([data-magnetic]).
 export default function useInteractions() {
   useEffect(() => {
     if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const aura = document.querySelector('.aura');
     let tiltEl = null, magEl = null, raf = 0, last = null;
 
     const resetTilt = (el) => { el?.style.setProperty('--rx', '0deg'); el?.style.setProperty('--ry', '0deg'); };
@@ -15,7 +14,6 @@ export default function useInteractions() {
     const frame = () => {
       raf = 0;
       const e = last;
-      if (aura) aura.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
       const t = e.target instanceof Element ? e.target : null;
 
       const spot = t?.closest('.spot');
